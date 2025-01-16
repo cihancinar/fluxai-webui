@@ -18,3 +18,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## TODO
+
+[] Add other Flux models
+[] Add other Flux fields
+[] Add the possibility to download an image
+[] Add screenshots/documentation and Vercel deployment
