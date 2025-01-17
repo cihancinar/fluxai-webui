@@ -1,4 +1,4 @@
-# Flux AI / Stable Diffusion Web UI
+# Flux AI / Stable Diffusion Web UI for Replicate
 
 Flux AI / Stable Diffusion Web UI is an AI-powered image generation platform built using Next.js 15 and the Flux and Stable Diffusion AI models. The platform allows users to create high-quality images from text prompts quickly and easily.
 
