@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
     );
   }
  
-  const { prompt } = await request.json();
+  const { prompt, model } = await request.json();
  
   const options = {
     // version: '8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f',
-    model: 'black-forest-labs/flux-dev',
+    model: model,
     input: { prompt }
   }
  

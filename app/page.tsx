@@ -1,9 +1,11 @@
-'use client';
+"use client";
 
 import { Button } from "@/components/ui/button";
-import Navbar from '@/components/Navbar'
-import { Input } from "@/components/ui/input";
+import Navbar from "@/components/Navbar";
+import Loader from "@/components/Loader";
 import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import Combobox from "@/components/Combobox";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -11,13 +13,16 @@ export default function Home() {
   interface Prediction {
     id: string;
     status: string;
-    output?: string[];
+    output?: string[] | string;
     detail?: string;
   }
-  
+
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [error, setError] = useState(null);
-  
+  const [selectedModel, setSelectedModel] = useState(
+    "black-forest-labs/flux-dev"
+  );
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const response = await fetch("/api/predictions", {
@@ -27,6 +32,7 @@ export default function Home() {
       },
       body: JSON.stringify({
         prompt: (e.target as HTMLFormElement).prompt.value,
+        model: selectedModel,
       }),
     });
     let prediction = await response.json();
@@ -35,7 +41,7 @@ export default function Home() {
       return;
     }
     setPrediction(prediction);
-    
+
     while (
       prediction.status !== "succeeded" &&
       prediction.status !== "failed"
@@ -47,67 +53,103 @@ export default function Home() {
         setError(prediction.detail);
         return;
       }
-      console.log({ prediction: prediction });
       setPrediction(prediction);
     }
   };
-  
+
+  const getImageSrc = (output: string[] | string) => {
+    if (Array.isArray(output)) {
+      return output[output.length - 1];
+    }
+    return output;
+  };
+
+  const handleDownload = () => {
+    const src = getImageSrc(prediction?.output);
+    if (src) {
+      const link = document.createElement("a");
+      link.href = src;
+      link.download = "generated-image.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
-    <Navbar />
-    <main className="flex flex-1">
-    
-    {/* Left column - Form */}
-    <div className="w-1/2 p-8 border-r border-gray-200">
-    <div className="p-6">
-    <h2 className="text-lg font-semibold">
-    black-forest-labs / dev
-    </h2>
-    
-    <form onSubmit={handleSubmit} className="space-y-4">
-    <Input
-    type="text"
-    name="prompt"
-    placeholder="Enter a prompt to display an image"
-    className="flex-1"
-    />
-    <Button type="submit" className="w-full">Generate Image</Button>
-    </form>
-    </div>
-    </div>
-    
-    
-    {/* Right column - Output */}
-    <div className="w-1/2 p-8 flex flex-col items-center ">
-    <div className="p-4 mb-4 bg-gray-200 flex items-center justify-center" style={{ width: '100%', height: '512px' }}>
-    {prediction ? (
-      prediction.output ? (
-        <img
-        src={prediction.output[prediction.output.length - 1]}
-        alt="Generated image"
-        className="max-w-full max-h-full"
-        />
-      ) : prediction.status === 'processing' ? (
-        <div role="status">
-        <svg aria-hidden="true" className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
-        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
-        </svg>
-        <span className="sr-only">Loading...</span>
+      <Navbar />
+      <main className="flex flex-1">
+        {/* Left column - Form */}
+        <div className="w-1/2 p-8 border-r border-gray-200">
+          <h2 className="text-lg font-semibold mb-4 text-center">Input</h2>
+
+          <div className="p-6">
+            <div className="pb-8">
+              <Combobox value={selectedModel} onChange={setSelectedModel} />
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <label
+                htmlFor="prompt"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Prompt
+              </label>
+              <Textarea
+                name="prompt"
+                placeholder=""
+                className="flex-1"
+                rows={4}
+              />
+
+              <Button type="submit" className="w-full">
+                Generate Image
+              </Button>
+            </form>
+          </div>
         </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">Image Generation Started..</p>
-      )
-    ) : (
-      <p className="text-sm text-muted-foreground">No image generated yet.</p>
-    )}
-    </div>
-    <p className="text-sm text-muted-foreground">
-    status: {prediction?.status}
-    </p>
-    </div>
-    
-    </main>
+
+        {/* Right column - Output */}
+        <div className="w-1/2 p-8 flex flex-col items-center ">
+          <h2 className="text-lg font-semibold mb-4">Output</h2>
+          <div
+            className="p-4 mb-4 bg-gray-200 flex items-center justify-center"
+            style={{ width: "100%", height: "512px" }}
+          >
+            {prediction ? (
+              prediction.output ? (
+                <>
+                  <img
+                    src={getImageSrc(prediction.output)}
+                    alt="Generated image"
+                    className="max-w-full max-h-full"
+                  />
+                </>
+              ) : prediction.status === "processing" ? (
+                <Loader />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Image Generation Started..
+                </p>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No image generated yet.
+              </p>
+            )}
+          </div>
+          
+          <p className="text-sm text-muted-foreground">
+            status: {prediction?.status}
+          </p>
+          {prediction && prediction.output && (
+            <Button onClick={handleDownload} className="mt-4" variant="outline">
+              Download Image
+            </Button>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
